@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FoodieBot</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 420px;
+            height: 650px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #ff7043;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h2 {
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 13px;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            max-width: 85%;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+
+        .bot {
+            background: #eeeeee;
+            color: #222;
+            margin-right: auto;
+        }
+
+        .user {
+            background: #ff7043;
+            color: white;
+            margin-left: auto;
+        }
+
+        /* IMAGE PREVIEW */
+
+        .image-preview {
+            display: none;
+            padding: 8px 12px;
+            background: white;
+            border-top: 1px solid #ddd;
+        }
+
+        .image-preview img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        /* INPUT AREA */
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-top: 1px solid #ddd;
+            background: white;
+            gap: 8px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        #sendButton {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #ff7043;
+            color: white;
+            cursor: pointer;
+        }
+
+        #sendButton:hover {
+            background: #e85d32;
+        }
+
+        /* ADD PHOTO BUTTON */
+
+        #photoButton {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 8px;
+            background: #eeeeee;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        #photoButton:hover {
+            background: #dddddd;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        #analyzeButton {
+            display: none;
+            margin-left: 8px;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            background: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h2>🍴 FoodieBot</h2>
+
+        <p>Your Food Assistant</p>
+
+    </div>
+
+
+    <!-- CHAT -->
+
+    <div class="chat-box" id="chatBox">
+
+        <div class="message bot">
+Hello! 👋 I'm FoodieBot.
+
+Ask me about recipes, ingredients,
+cooking methods or food.
+
+You can also 📷 upload a food photo
+and I can analyze it for you!
+        </div>
+
+    </div>
+
+
+    <!-- IMAGE PREVIEW -->
+
+    <div class="image-preview" id="imagePreview">
+
+        <img id="previewImage" src="" alt="Food Preview">
+
+    </div>
+
+
+    <!-- INPUT -->
+
+    <div class="input-area">
+
+        <!-- PHOTO BUTTON -->
+
+        <button id="photoButton" title="Add Food Photo">
+            📷
+        </button>
+
+        <!-- Hidden file input -->
+
+        <input
+            type="file"
+            id="imageInput"
+            accept="image/*"
+        >
+
+        <!-- Text input -->
+
+        <input
+            type="text"
+            id="messageInput"
+            placeholder="Ask something about food..."
+            autocomplete="off"
+        >
+
+        <!-- Analyze button -->
+
+        <button id="analyzeButton">
+            Analyze
+        </button>
+
+        <!-- Send -->
+
+        <button id="sendButton">
+            Send
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const chatBox = document.getElementById("chatBox");
+
+const messageInput =
+    document.getElementById("messageInput");
+
+const sendButton =
+    document.getElementById("sendButton");
+
+const photoButton =
+    document.getElementById("photoButton");
+
+const imageInput =
+    document.getElementById("imageInput");
+
+const imagePreview =
+    document.getElementById("imagePreview");
+
+const previewImage =
+    document.getElementById("previewImage");
+
+const analyzeButton =
+    document.getElementById("analyzeButton");
+
+
+/* =========================
+   ADD MESSAGE
+========================= */
+
+function addMessage(message, type) {
+
+    const messageDiv =
+        document.createElement("div");
+
+    messageDiv.classList.add(
+        "message",
+        type
+    );
+
+    messageDiv.innerText = message;
+
+    chatBox.appendChild(messageDiv);
+
+    chatBox.scrollTop =
+        chatBox.scrollHeight;
+}
+
+
+/* =========================
+   NORMAL TEXT CHAT
+========================= */
+
+async function sendMessage() {
+
+    const message =
+        messageInput.value.trim();
+
+    if (!message) return;
+
+    addMessage(message, "user");
+
+    messageInput.value = "";
+
+    try {
+
+        const response =
+            await fetch("/chat", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    message: message
+                })
+
+            });
+
+        const data =
+            await response.json();
+
+        addMessage(
+            data.reply,
+            "bot"
+        );
+
+    }
+
+    catch (error) {
+
+        addMessage(
+            "Unable to connect to the server.",
+            "bot"
+        );
+
+    }
+
+}
+
+
+/* =========================
+   PHOTO BUTTON
+========================= */
+
+photoButton.addEventListener(
+    "click",
+    function() {
+
+        imageInput.click();
+
+    }
+);
+
+
+/* =========================
+   IMAGE SELECT
+========================= */
+
+imageInput.addEventListener(
+    "change",
+    function() {
+
+        const file =
+            imageInput.files[0];
+
+        if (!file) return;
+
+
+        /* Preview */
+
+        const reader =
+            new FileReader();
+
+        reader.onload =
+            function(event) {
+
+                previewImage.src =
+                    event.target.result;
+
+                imagePreview.style.display =
+                    "block";
+
+            };
+
+        reader.readAsDataURL(file);
+
+
+        /* Show analyze button */
+
+        analyzeButton.style.display =
+            "block";
+
+    }
+);
+
+
+/* =========================
+   ANALYZE IMAGE
+========================= */
+
+analyzeButton.addEventListener(
+    "click",
+    async function() {
+
+        const file =
+            imageInput.files[0];
+
+        if (!file) {
+
+            addMessage(
+                "Please select a food image first.",
+                "bot"
+            );
+
+            return;
+        }
+
+
+        /* Show user message */
+
+        addMessage(
+            "📷 Food photo uploaded",
+            "user"
+        );
+
+
+        /* Disable button */
+
+        analyzeButton.disabled =
+            true;
+
+        analyzeButton.innerText =
+            "Analyzing...";
+
+
+        /* Create FormData */
+
+        const formData =
+            new FormData();
+
+        formData.append(
+            "image",
+            file
+        );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/analyze-image",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            addMessage(
+                data.reply,
+                "bot"
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            addMessage(
+                "Unable to analyze the image. Please try again.",
+                "bot"
+            );
+
+        }
+
+
+        /* Reset */
+
+        analyzeButton.disabled =
+            false;
+
+        analyzeButton.innerText =
+            "Analyze";
+
+    }
+);
+
+
+/* =========================
+   SEND BUTTON
+========================= */
+
+sendButton.addEventListener(
+    "click",
+    sendMessage
+);
+
+
+/* =========================
+   ENTER KEY
+========================= */
+
+messageInput.addEventListener(
+    "keypress",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            sendMessage();
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
